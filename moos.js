@@ -75,23 +75,56 @@
       //saan kätte purgid localStorage kui on
       if(localStorage.jars){
         //võtan stringi ja teen tagasi objektideks
-        this.jars = JSON.parse(localStorage.jars);
+        this.createListFromArray = JSON.parse(localStorage.jars);
         console.log('laadisin localStorageist massiivi ' + this.jars.length);
 
-        //tekitan loendi htmli
-        this.jars.forEach(function(jar){
+      }else{
+        //ei olnud olemas, teen päringu serverisse
 
-          var new_jar = new Jar(jar.title, jar.ingredients);
+        var xhttp = new XMLHttpRequest();
 
-          var li = new_jar.createHtmlElement();
-          document.querySelector('.list-of-jars').appendChild(li);
-        });
+        //vahetub siis kui toimub muutus ühenduses
+        xhttp.onreadystatechange = function() {
+
+          console.log(xhttp.readyState);
+
+          //fail jõudis tervenisti kohale
+          if (xhttp.readyState == 4 && xhttp.status == 200) {
+
+            var result = JSON.parse(xhttp.responseText);
+            console.log(result);
+
+            // NB ! saab viidata MOOSIPURGILE ka Moosipurk.instance
+
+            Moosipurk.instance.createListFromArray(result);
+            console.log('laadisin serverist');
+          }
+        };
+        //päringu tegemine
+        xhttp.open("GET", "savedata.php", true);
+        xhttp.send();
       }
+
+    },
+
+    createListFromArray: function(arrayOfObjects){
+
+      this.jars = arrayOfObjects;
+
+      //tekitan loendi htmli
+      this.jars.forEach(function(jar){
+
+        var new_jar = new Jar(jar.title, jar.ingredients);
+
+        var li = new_jar.createHtmlElement();
+        document.querySelector('.list-of-jars').appendChild(li);
+      });
 
       //kuulame hiireklikki nupul
       this.bindEvents();
 
     },
+
     bindEvents: function(){
       document.querySelector('.add-new-jar').addEventListener('click',this.addNewClick.bind(this));
 
@@ -140,6 +173,17 @@
 
        //JSON'i stringina salvestan localStorage'isse
        localStorage.setItem('jars', JSON.stringify(this.jars));
+
+       //salvestan serverisse
+       var xhttp = new XMLHttpRequest();
+       xhttp.onreadystatechange = function(){
+         if (xhttp.readyState == 4 && xhttp.status == 200){
+           console.log('salvestas serverisse');
+         }
+       };
+       console.log("savedata.php?title="+title+"&ingredients="+ingredients);
+       xhttp.open("GET", "savedata.php?title="+title+"&ingredients="+ingredients,true);
+       xhttp.send();
 
        // 2) lisan selle htmli listi juurde
        var li = new_jar.createHtmlElement();
@@ -204,8 +248,6 @@
 
       var content = document.createTextNode(this.title + ' | ' + this.ingredients);
       span_with_content.appendChild(content);
-
-      var x = document.createElement("BUTTON");
 
       li.appendChild(span_with_content);
 
